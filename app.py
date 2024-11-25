@@ -36,11 +36,24 @@ model = LinearRegression()
 model.fit(X_train, y_train)
 
 # Streamlit app
+st.set_page_config(page_title="Insurance Charges Prediction", layout="wide")
 st.title("Insurance Charges Prediction")
+
+# Add a background image
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-image: url("https://www.w3schools.com/w3images/mountains.jpg");
+        background-size: cover;
+    }
+    </style>
+    """, unsafe_allow_html=True
+)
 
 st.write("Enter the details below to predict insurance charges:")
 
-# Input features
+# Input features with number inputs
 age = st.number_input("Age", min_value=18, max_value=100, value=30)
 sex = st.selectbox("Sex", options=["male", "female"])
 bmi = st.number_input("BMI", min_value=10.0, max_value=50.0, value=25.0)
@@ -61,8 +74,17 @@ input_data = pd.DataFrame({
 # Preprocess input
 input_transformed = preprocessor.transform(input_data)
 
-# Predict charges
-if st.button("Predict"):
-    prediction = model.predict(input_transformed)[0]
-    st.subheader("Predicted Insurance Charges")
-    st.write(f"${prediction:,.2f}")
+# Add a loading spinner while predicting
+with st.spinner('Predicting charges...'):
+    if st.button("Predict"):
+        prediction = model.predict(input_transformed)[0]
+        
+        # Apply money effect
+        st.subheader("Predicted Insurance Charges")
+        st.markdown(
+            f"""
+            <p style="font-size: 30px; color: #FF5733; font-weight: bold; transition: all 0.5s ease-in-out; text-align: center;">
+                ${prediction:,.2f}
+            </p>
+            """, unsafe_allow_html=True
+        )
