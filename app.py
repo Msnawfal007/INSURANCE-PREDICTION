@@ -1,86 +1,101 @@
-import joblib
 import streamlit as st
-import numpy as np
 import pandas as pd
+import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
 
 # Load the dataset
-@st.cache
-def load_data():
-    return pd.read_csv('insurance.csv')
+data = pd.read_csv('insurance.csv')
 
-# Preprocess the data
-@st.cache
-def preprocess_data(data, categorical_features, numeric_features):
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('cat', OneHotEncoder(drop='first'), categorical_features)
-        ],
-        remainder='passthrough'
-    )
-    X = data.drop('charges', axis=1)
-    y = data['charges']
-    X_transformed = preprocessor.fit_transform(X)
-    return X_transformed, y, preprocessor
-
-# Train the model and save it
-def train_and_save_model(X, y):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    model = LinearRegression()
-    model.fit(X_train, y_train)
-    
-    # Save the model and encoder
-    joblib.dump(model, "insurance_model.pkl")
-    joblib.dump(preprocessor, "preprocessor.pkl")
-    st.write("Model and preprocessor saved successfully!")
-    return model
-
-# Load the model and encoder
-def load_model_and_encoder():
-    model = joblib.load("insurance_model.pkl")
-    preprocessor = joblib.load("preprocessor.pkl")
-    return model, preprocessor
-
-# Main Streamlit App
-st.title("Insurance Cost Prediction App")
-
-# Load data
-data = load_data()
+# Preprocessing
 categorical_features = ['sex', 'smoker', 'region']
 numeric_features = ['age', 'bmi', 'children']
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('cat', OneHotEncoder(drop='first'), categorical_features)
+    ],
+    remainder='passthrough'
+)
 
-# Train or Load Model
-if st.sidebar.button("Train Model"):
-    X_transformed, y, preprocessor = preprocess_data(data, categorical_features, numeric_features)
-    model = train_and_save_model(X_transformed, y)
-else:
-    model, preprocessor = load_model_and_encoder()
+# Prepare features (X) and target (y)
+X = data.drop('charges', axis=1)
+y = data['charges']
+X_transformed = preprocessor.fit_transform(X)
 
-st.subheader("Make a Prediction")
-# User Inputs
-age = st.slider("Age", 18, 100, 30)
-bmi = st.slider("BMI", 10, 50, 25.0)
-children = st.slider("Number of Children", 0, 5, 0)
-sex = st.selectbox("Sex", options=["male", "female"])
-smoker = st.selectbox("Smoker", options=["yes", "no"])
-region = st.selectbox("Region", options=["northeast", "northwest", "southeast", "southwest"])
+# Train-Test Split
+X_train, X_test, y_train, y_test = train_test_split(X_transformed, y, test_size=0.2, random_state=42)
+
+# Train the model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Streamlit UI
+st.title("Insurance Charges Prediction ❄️")
+st.write("Use this tool to predict **medical insurance charges** based on user input. Fill in the form below:")
+
+# User Input
+age = st.number_input(
+    "Age", 
+    min_value=1, 
+    max_value=100, 
+    value=1,  # Default realistic value
+    step=1
+)
+
+sex = st.selectbox(
+    "Sex", 
+    ["male", "female"], 
+    index=0  # Default is 'male'
+)
+
+bmi = st.number_input(
+    "BMI (Body Mass Index)", 
+    min_value=10.0, 
+    max_value=50.0, 
+    value=10.0,  # Default realistic value
+    step=0.1, 
+    format="%.1f"
+)
+
+children = st.number_input(
+    "Number of Children", 
+    min_value=0, 
+    max_value=10, 
+    value=0,  # Default is 0
+    step=1
+)
+
+smoker = st.selectbox(
+    "Smoker", 
+    ["yes", "no"], 
+    index=1  # Default is 'no'
+)
+
+region = st.selectbox(
+    "Region", 
+    ["southwest", "southeast", "northwest", "northeast"], 
+    index=0  # Default is 'southwest'
+)
 
 # Prepare user input for prediction
-user_input = pd.DataFrame({
+input_data = pd.DataFrame({
     'age': [age],
+    'sex': [sex],
     'bmi': [bmi],
     'children': [children],
-    'sex': [sex],
     'smoker': [smoker],
     'region': [region]
 })
 
-user_transformed = preprocessor.transform(user_input)
-prediction = model.predict(user_transformed)
+input_transformed = preprocessor.transform(input_data)
 
-# Display the result
+# Predict and display
 if st.button("Predict"):
-    st.success(f"Predicted Insurance Charges: ${prediction[0]:.2f}")
+    prediction = model.predict(input_transformed)
+    st.success(f"💰 Predicted Insurance Charges: **${prediction[0]:,.2f}**")
+    st.snow()  # Trigger the snow effect
+
+# Footer
+st.write("Developed by Nawfal. Powered by **Streamlit** and **Machine Learning**.")
